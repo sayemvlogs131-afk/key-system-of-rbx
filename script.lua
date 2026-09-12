@@ -386,6 +386,42 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+local function RefreshCamera()
+    Camera = Workspace.CurrentCamera or Camera
+    return Camera
+end
+
+pcall(function()
+    Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(RefreshCamera)
+end)
+
+-- ==================== DEVICE DETECTION / RESPONSIVE UI ====================
+local DeviceInfo = {
+    Touch = false,
+    Mobile = false,
+    Tablet = false,
+    Desktop = true,
+    Width = 0,
+    Height = 0,
+}
+
+local function DetectDevice()
+    local viewport = Camera and Camera.ViewportSize or Vector2.new(1280, 720)
+    DeviceInfo.Width = viewport.X
+    DeviceInfo.Height = viewport.Y
+
+    local touch = false
+    pcall(function() touch = UserInputService.TouchEnabled end)
+    DeviceInfo.Touch = touch
+
+    -- Touch + narrow viewport = phone. Touch + wider viewport = tablet.
+    DeviceInfo.Mobile = touch and viewport.X <= 600
+    DeviceInfo.Tablet = touch and viewport.X > 600 and viewport.X <= 1100
+    DeviceInfo.Desktop = not DeviceInfo.Mobile and not DeviceInfo.Tablet
+end
+
+DetectDevice()
+
 -- ==================== CONFIGURATION (BLACK EDITION) ====================
 local CONFIG = {
     PanicKey = Enum.KeyCode.End,
@@ -533,7 +569,7 @@ local AutoFarmTarget = nil
 local KeyGateGui = nil
 local KeyGateConnections = {}
 local KeyVerified = false
-local KEY_CODE = "9080"
+local KEY_CODE = ProtectionConfig.SecretKey
 
 -- ==================== UTILITIES (FULLY FIXED) ====================
 local function SafeCall(fn, ...)
@@ -835,6 +871,11 @@ local function CreateLoadingScreen()
     CenterContainer.BackgroundTransparency = 1
     CenterContainer.ZIndex = 102
     CenterContainer.Parent = Backdrop
+
+    local CenterScale = Instance.new("UIScale")
+    local vw = (Camera and Camera.ViewportSize.X) or 800
+    CenterScale.Scale = math.clamp(vw / 480, 0.72, 1)
+    CenterScale.Parent = CenterContainer
 
     -- Logo skull
     local SkullIcon = Instance.new("TextLabel")
@@ -1278,6 +1319,11 @@ local function CreateESP(targetPlayer)
 
         box.Visible = State.ESP.Boxes and visible
         bb.Enabled = visible
+        nameLbl.Visible = State.ESP.Names and visible
+        infoLbl.Visible = (State.ESP.Health or State.ESP.Distance) and visible
+        hpBg.Visible = State.ESP.Health and visible
+        distLbl.Visible = State.ESP.Distance and visible
+        toolLbl.Visible = State.ESP.Tool and visible
         tracer.Visible = State.ESP.Tracers and visible
         highlight.Enabled = State.ESP.Chams and visible
 
@@ -1667,11 +1713,33 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 local MainScale = Instance.new("UIScale")
 MainScale.Name = "ResponsiveScale"
 MainScale.Parent = MainFrame
-local function UpdateMainScale()
+
+local function GetResponsivePanelSize()
+    RefreshCamera()
     local v = Camera and Camera.ViewportSize or Vector2.new(CONFIG.PanelWidth + 40, CONFIG.PanelHeight + 40)
-    local sx = math.max(0.55, (v.X - CONFIG.MinPanelMargin * 2) / CONFIG.PanelWidth)
-    local sy = math.max(0.55, (v.Y - CONFIG.MinPanelMargin * 2) / CONFIG.PanelHeight)
-    MainScale.Scale = math.min(1, sx, sy)
+    local w, h = math.max(v.X, 1), math.max(v.Y, 1)
+    local panelW, panelH
+
+    if DeviceInfo.Mobile then
+        panelW = math.min(420, math.max(260, w - 12))
+        panelH = math.min(760, math.max(260, h - 16))
+    elseif DeviceInfo.Tablet then
+        panelW = math.min(720, math.max(420, w - 24))
+        panelH = math.min(700, math.max(380, h - 24))
+    else
+        panelW = math.min(CONFIG.PanelWidth, math.max(520, w - CONFIG.MinPanelMargin * 2))
+        panelH = math.min(CONFIG.PanelHeight, math.max(500, h - CONFIG.MinPanelMargin * 2))
+    end
+
+    return math.floor(panelW), math.floor(panelH)
+end
+
+local function UpdateMainScale()
+    DetectDevice()
+    local panelW, panelH = GetResponsivePanelSize()
+    MainFrame.Size = UDim2.fromOffset(panelW, panelH)
+    MainFrame.Position = UDim2.new(0.5, -panelW/2, 0.5, -panelH/2)
+    MainScale.Scale = 1
 end
 SafeCall(function()
     if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateMainScale) end
@@ -1804,17 +1872,20 @@ local function ToggleUI(show)
     MainFrame.Visible = show
     Watermark.Visible = show
     if show then
-        MainFrame.Position = UDim2.new(0.5, -CONFIG.PanelWidth/2, 0.5, -CONFIG.PanelHeight/2 + 40)
-        local targetScale = MainScale.Scale
-        MainScale.Scale = targetScale * 0.92
+        DetectDevice()
+        local panelW, panelH = GetResponsivePanelSize()
+        MainFrame.Size = UDim2.fromOffset(panelW, panelH)
+        MainFrame.Position = UDim2.new(0.5, -panelW/2, 0.5, -panelH/2 + 24)
+        MainScale.Scale = 0.94
         SafeCall(function()
             TweenService:Create(MainFrame, TweenInfo.new(0.42, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0.5, -CONFIG.PanelWidth/2, 0.5, -CONFIG.PanelHeight/2)
+                Position = UDim2.new(0.5, -panelW/2, 0.5, -panelH/2)
             }):Play()
             TweenService:Create(MainScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Scale = targetScale
+                Scale = 1
             }):Play()
         end)
+        UpdateTabLayout()
     end
 end
 
@@ -1837,8 +1908,10 @@ MinBtn.MouseButton1Click:Connect(function()
     TabContainer.Visible = not minimized
     ContentFrame.Visible = not minimized
     SafeCall(function()
+        local pw = MainFrame.AbsoluteSize.X > 0 and MainFrame.AbsoluteSize.X or CONFIG.PanelWidth
+        local ph = MainFrame.AbsoluteSize.Y > 0 and MainFrame.AbsoluteSize.Y or CONFIG.PanelHeight
         TweenService:Create(MainFrame, TweenInfo.new(0.35), {
-            Size = minimized and UDim2.new(0, CONFIG.PanelWidth, 0, 60) or UDim2.new(0, CONFIG.PanelWidth, 0, CONFIG.PanelHeight)
+            Size = minimized and UDim2.fromOffset(pw, 60) or UDim2.fromOffset(pw, ph)
         }):Play()
     end)
 end)
@@ -3051,7 +3124,11 @@ local Features = {
     {Category="Combat", Type="Slider", Name="Aura Range", Min=5, Max=30, Default=15, Callback=function(v) State.MeleeAura.Range = v end},
     {Category="Combat", Type="Toggle", Name="Hitbox Expander", Color=Color3.fromRGB(100,100,100), Default=false, Callback=function(v)
         State.Hitbox.Enabled = v
-        for name, conn in pairs(HitboxConnections) do SafeCall(function() conn:Disconnect() end) end
+        for _, conn in pairs(HitboxConnections) do
+            SafeCall(function()
+                if conn and typeof(conn) == "RBXScriptConnection" then conn:Disconnect() end
+            end)
+        end
         HitboxConnections = {}
         Disconnect("HitboxCharAdded")
 
@@ -3807,8 +3884,16 @@ local function RenderTab(index)
     if index < 1 then index = #CONFIG.Categories end
     if index > #CONFIG.Categories then index = 1 end
     CurrentTab = index
+    DetectDevice()
 
     for i, btn in ipairs(TabButtons) do
+        if DeviceInfo.Mobile then
+            btn.Visible = math.abs(i - index) <= 1
+        elseif DeviceInfo.Tablet then
+            btn.Visible = math.abs(i - index) <= 2
+        else
+            btn.Visible = true
+        end
         local active = i == index
         SafeCall(function()
             TweenService:Create(btn, TweenInfo.new(0.2), {
@@ -3847,7 +3932,50 @@ local function RenderTab(index)
     ContentFrame.CanvasPosition = Vector2.new(0, 0)
 end
 
-local tabWidth = math.max(42, math.floor((CONFIG.PanelWidth - 70 - (5 * (#CONFIG.Categories - 1))) / #CONFIG.Categories))
+local tabWidth = 70
+local function UpdateTabLayout()
+    DetectDevice()
+    local panelW = MainFrame.AbsoluteSize.X
+    if panelW <= 0 then panelW = CONFIG.PanelWidth end
+    if TitleText and SubTitle then
+        if DeviceInfo.Mobile then
+            TitleText.Size = UDim2.new(1, -150, 0, 24)
+            TitleText.TextSize = 15
+            SubTitle.Size = UDim2.new(1, -150, 0, 18)
+            SubTitle.TextSize = 9
+        elseif DeviceInfo.Tablet then
+            TitleText.Size = UDim2.new(0, 320, 0, 26)
+            TitleText.TextSize = 17
+            SubTitle.Size = UDim2.new(0, 330, 0, 18)
+            SubTitle.TextSize = 10
+        else
+            TitleText.Size = UDim2.new(0, 330, 0, 28)
+            TitleText.TextSize = 19
+            SubTitle.Size = UDim2.new(0, 360, 0, 20)
+            SubTitle.TextSize = 11
+        end
+    end
+
+    if DeviceInfo.Mobile then
+        tabWidth = math.max(62, math.floor((panelW - 86) / 3))
+    elseif DeviceInfo.Tablet then
+        tabWidth = math.max(72, math.floor((panelW - 80) / 5))
+    else
+        tabWidth = math.max(55, math.floor((panelW - 70 - (5 * (#CONFIG.Categories - 1))) / #CONFIG.Categories))
+    end
+
+    for i, btn in ipairs(TabButtons) do
+        btn.Size = UDim2.new(0, tabWidth, 1, -4)
+        if DeviceInfo.Mobile then
+            btn.Visible = math.abs(i - CurrentTab) <= 1
+        elseif DeviceInfo.Tablet then
+            btn.Visible = math.abs(i - CurrentTab) <= 2
+        else
+            btn.Visible = true
+        end
+    end
+end
+
 for i, name in ipairs(CONFIG.Categories) do
     local btn = Instance.new("TextButton", TabContainer)
     btn.Size = UDim2.new(0, tabWidth, 1, -4); btn.Position = UDim2.new(0, 0, 0, 2)
@@ -3859,6 +3987,8 @@ for i, name in ipairs(CONFIG.Categories) do
     btn.MouseButton1Click:Connect(function() if not PanicActive then RenderTab(i) end end)
     table.insert(TabButtons, btn)
 end
+
+UpdateTabLayout()
 
 LeftArrow.MouseButton1Click:Connect(function() if not PanicActive then RenderTab(CurrentTab - 1) end end)
 RightArrow.MouseButton1Click:Connect(function() if not PanicActive then RenderTab(CurrentTab + 1) end end)
@@ -3926,6 +4056,25 @@ local drag, dragStart, startPos = false, nil, nil
 FloatBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true; dragStart = i.Position; startPos = FloatBtn.Position end end)
 FloatBtn.InputChanged:Connect(function(i) if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - dragStart; FloatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
 FloatBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end end)
+
+local function UpdateFloatingButton()
+    DetectDevice()
+    if DeviceInfo.Mobile then
+        local bw = math.min(150, math.max(120, DeviceInfo.Width - 20))
+        FloatBtn.Size = UDim2.fromOffset(bw, 46)
+        FloatBtn.Position = UDim2.new(1, -(bw + 8), 0, 12)
+        FloatBtn.TextSize = 13
+    elseif DeviceInfo.Tablet then
+        FloatBtn.Size = UDim2.fromOffset(170, 50)
+        FloatBtn.Position = UDim2.new(1, -184, 0, 14)
+        FloatBtn.TextSize = 14
+    else
+        FloatBtn.Size = UDim2.fromOffset(190, 55)
+        FloatBtn.Position = UDim2.new(1, -210, 0, 20)
+        FloatBtn.TextSize = 16
+    end
+end
+UpdateFloatingButton()
 
 -- ==================== KEY GATE ====================
 local Panic
@@ -4094,6 +4243,7 @@ local function CreateKeyGate()
     return KeyGateGui
 end
 
+
 -- ==================== PANIC (FULLY FIXED) ====================
 Panic = function()
     if PanicActive then return end
@@ -4109,6 +4259,12 @@ Panic = function()
         end) 
     end
     Connections = {}
+    for _, conn in pairs(HitboxConnections) do
+        SafeCall(function()
+            if conn and typeof(conn) == "RBXScriptConnection" then conn:Disconnect() end
+        end)
+    end
+    HitboxConnections = {}
     ClearESP()
 
     SafeCall(function()
@@ -4155,12 +4311,6 @@ Panic = function()
         UpdateFPSBoost()
     end)
 
-    for _, conn in ipairs(KeyGateConnections) do
-        SafeCall(function() if conn and typeof(conn) == "RBXScriptConnection" then conn:Disconnect() end end)
-    end
-    KeyGateConnections = {}
-    SafeCall(function() if KeyGateGui and KeyGateGui.Parent then KeyGateGui:Destroy() end end)
-    KeyGateGui = nil
     SafeCall(function() ScreenGui:Destroy() end)
     warn("[RBX 1.0] PANIC EXECUTED. ALL SYSTEMS PURGED.")
 end
@@ -4190,7 +4340,7 @@ Connect("MainInput", UserInputService.InputBegan, function(input, gpe)
     end
 end)
 
--- ==================== INIT (KEY GATED + ANIMATED) ====================
+-- ==================== INIT (KEY GATED + RESPONSIVE + ANIMATED) ====================
 CreateKeyGate()
 
 task.spawn(function()
@@ -4202,46 +4352,73 @@ task.spawn(function()
     local LoadingScreen = CreateLoadingScreen()
     if LoadingScreen and LoadingScreen.SetProgress then
         local ok, err = pcall(function()
-            LoadingScreen.SetProgress(10, "Loading services..."); task.wait(0.25); if PanicActive then return end
-            LoadingScreen.SetProgress(25, "Initializing state..."); task.wait(0.25); if PanicActive then return end
-            LoadingScreen.SetProgress(40, "Setting up ESP system..."); task.wait(0.25); if PanicActive then return end
-            LoadingScreen.SetProgress(55, "Building RBX 1.0 interface..."); task.wait(0.25); if PanicActive then return end
-            LoadingScreen.SetProgress(70, "Loading feature modules..."); task.wait(0.25); if PanicActive then return end
-            LoadingScreen.SetProgress(85, "Finalizing setup..."); task.wait(0.25); if PanicActive then return end
-            LoadingScreen.SetProgress(100, "Ready!"); task.wait(0.45); if PanicActive then return end
+            DetectDevice()
+            LoadingScreen.SetProgress(10, "Loading services..."); task.wait(0.12); if PanicActive then return end
+            LoadingScreen.SetProgress(25, "Initializing state..."); task.wait(0.12); if PanicActive then return end
+            LoadingScreen.SetProgress(40, "Setting up ESP system..."); task.wait(0.12); if PanicActive then return end
+            LoadingScreen.SetProgress(55, "Building responsive interface..."); task.wait(0.12); if PanicActive then return end
+            LoadingScreen.SetProgress(70, "Loading feature modules..."); task.wait(0.12); if PanicActive then return end
+            LoadingScreen.SetProgress(85, "Optimizing for " .. (DeviceInfo.Mobile and "mobile" or DeviceInfo.Tablet and "tablet" or "desktop") .. "..."); task.wait(0.12); if PanicActive then return end
+            LoadingScreen.SetProgress(100, "Ready!"); task.wait(0.25); if PanicActive then return end
 
             SafeCall(function()
                 for _, child in ipairs(LoadingScreen.Gui:GetDescendants()) do
                     if child:IsA("Frame") then
-                        TweenService:Create(child, TweenInfo.new(0.45), {BackgroundTransparency = 1}):Play()
+                        TweenService:Create(child, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
                     elseif child:IsA("TextLabel") then
-                        TweenService:Create(child, TweenInfo.new(0.45), {TextTransparency = 1}):Play()
+                        TweenService:Create(child, TweenInfo.new(0.35), {TextTransparency = 1}):Play()
                     elseif child:IsA("UIStroke") then
-                        TweenService:Create(child, TweenInfo.new(0.45), {Transparency = 1}):Play()
+                        TweenService:Create(child, TweenInfo.new(0.35), {Transparency = 1}):Play()
                     end
                 end
             end)
-            task.wait(0.5)
+            task.wait(0.35)
             LoadingScreen.Destroy()
             if PanicActive then return end
 
+            DetectDevice()
+            UpdateMainScale()
+            UpdateTabLayout()
+            UpdateFloatingButton()
             ScreenGui.Enabled = true
+            RenderTab(1)
             ToggleUI(true)
-            Notify("RBX 1.0 HUB", "Welcome back • v1.1.0 • UI animations enabled", 4, Color3.fromRGB(220,220,220))
+            Notify("RBX 1.0 HUB", "Welcome back • responsive UI • " .. (DeviceInfo.Mobile and "Mobile" or DeviceInfo.Tablet and "Tablet" or "Desktop"), 4, Color3.fromRGB(220,220,220))
         end)
         if not ok and not PanicActive then
             warn("[RBX 1.0] Loading error: " .. tostring(err))
             pcall(function() if LoadingScreen and LoadingScreen.Destroy then LoadingScreen.Destroy() end end)
+            DetectDevice()
+            UpdateMainScale()
+            UpdateTabLayout()
+            UpdateFloatingButton()
             ScreenGui.Enabled = true
+            RenderTab(1)
             MainFrame.Visible = true
             Watermark.Visible = true
-            RenderTab(1)
         end
     else
+        DetectDevice()
+        UpdateMainScale()
+        UpdateTabLayout()
+        UpdateFloatingButton()
         ScreenGui.Enabled = true
+        RenderTab(1)
         MainFrame.Visible = true
         Watermark.Visible = true
-        RenderTab(1)
     end
 end)
 
+
+-- Keep the UI responsive after rotation, resize, or mobile/desktop viewport changes.
+Connect("ResponsiveViewport", RunService.RenderStepped, function()
+    if PanicActive then return end
+    RefreshCamera()
+    local w = Camera and Camera.ViewportSize.X or 0
+    local h = Camera and Camera.ViewportSize.Y or 0
+    if math.abs(w - DeviceInfo.Width) >= 2 or math.abs(h - DeviceInfo.Height) >= 2 then
+        if not minimized then UpdateMainScale() end
+        UpdateTabLayout()
+        UpdateFloatingButton()
+    end
+end)
