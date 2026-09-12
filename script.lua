@@ -75,7 +75,18 @@ print(ProtectionConfig.HubName .. " Loaded Successfully!")
 -- ==================== SERVICES ====================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local UserInputService = nil
+pcall(function()
+    UserInputService = game:GetService("UserInputService")
+end)
+
+local function GetUserInputService()
+    if UserInputService then return UserInputService end
+    pcall(function()
+        UserInputService = game:GetService("UserInputService")
+    end)
+    return UserInputService
+end
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -112,7 +123,12 @@ local function DetectDevice()
     DeviceInfo.Height = viewport.Y
 
     local touch = false
-    pcall(function() touch = UserInputService.TouchEnabled end)
+    local UIS = GetUserInputService()
+    if UIS then
+        pcall(function()
+            touch = UIS.TouchEnabled == true
+        end)
+    end
     DeviceInfo.Touch = touch
 
     -- Touch + narrow viewport = phone. Touch + wider viewport = tablet.
