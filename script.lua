@@ -55,320 +55,21 @@ print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
     RBX 1.0 Hub
 
-    RBX 1.1.0 CHANGELOG / LEGACY FIX HISTORY:
-    - FIXED: Super Fast Click lag (dedicated thread, no RenderStepped)
-    - FIXED: Ultra Click lag (multi-threaded, proper cleanup)
-    - FIXED: Melee Aura not working with swords/melee weapons
-    - FIXED: Universal Clicker enhanced for melee detection
-    - FIXED: Auto Click (Legacy) using Heartbeat instead of RenderStepped
-    - FIXED: SpinBot CFrame accumulation drift
-    - FIXED: GodMode spam causing server kick
-    - FIXED: VehicleSpeed BodyVelocity cleanup on disable
-    - FIXED: WaterWalk platform not destroying on character death
-    - FIXED: Freecam camera type restoration on respawn
-    - FIXED: Hitbox expander memory leak (proper cleanup)
-    - FIXED: Reach expander not restoring on tool unequip
-    - FIXED: RapidFire firing without tool equipped
-    - FIXED: TriggerBot firing on non-player targets
-    - FIXED: AutoParry spam (cooldown added)
-    - FIXED: AutoShoot not respecting tool check timing
-    - FIXED: ESP BillboardGui memory leak
-    - FIXED: FPSBoost batch processing crash on large worlds
-    - FIXED: Panic function incomplete cleanup
-    - FIXED: State persistence GetCurrentDefault missing cases
-    - FIXED: CharacterAdded connections not cleaned up on Panic
-    - FIXED: Multiple tool checks causing false negatives
-    - FIXED: Camera Lock keybind not working after respawn
-    - FIXED: Spectate not restoring camera on disable
-    - FIXED: Invisible not restoring on respawn
-    - FIXED: Jetpack spamming jump state
-    - FIXED: BunnyHop firing when character not loaded
-    - FIXED: NoClip only updating on Stepped (now Heartbeat)
-    - FIXED: Fly mode BodyGyro/BodyVelocity not found after respawn
-    - FIXED: Gravity slider default mismatch (196 vs 196.2)
-    - FIXED: ColorTint not applying to ColorCorrection
-    - FIXED: Crosshair not destroying on Panic
-    - FIXED: Floating button not destroying on Panic
-    - FIXED: Notification stack overflow protection
-    - FIXED: Player cache not clearing on player leave
-    - FIXED: Raycast params filter not including tool
-    - FIXED: SilentAim position returning nil incorrectly
-    - FIXED: Aimbot target highlight not cleaning on disable
-    - FIXED: DistanceLabel position not updating with FOV
-    - FIXED: All pcall error messages now include feature name
-    - FIXED: Tool checker now checks Backpack too
-    - FIXED: AntiKnockback clamping Y velocity too aggressively
-    - FIXED: AutoHeal threshold slider range (1-100 -> 1-100)
-    - FIXED: HipHeight slider not applying on spawn
-    - FIXED: Stamina check now uses pcall for safety
-    - FIXED: AutoCollect firetouchinterest error handling
-    - FIXED: ClickTP keybind check order
-    - FIXED: Settings import not validating all fields
-    - FIXED: Destroy GUI button not stopping all loops
-    - FIXED: Watermark FPS counter not stopping on Panic
-    - FIXED: BG animation not stopping on Panic
-    - FIXED: Tab rendering error on invalid category
-    - FIXED: Slider knob position on extreme values
-    - FIXED: Dropdown index out of bounds
-    - FIXED: Keybind timeout connection leak
-    - FIXED: PlayerSelector not updating on player leave
-    - FIXED: Spectate target validation before camera set
-    - FIXED: AutoFarm placeholder (no implementation crash)
-    - FIXED: All RunService connections use proper disconnect
-    - FIXED: Memory leak in HitboxConnections table
-    - FIXED: ReachConnection global not used properly
-    - FIXED: FPSBoostProcessed not clearing on disable
-    - FIXED: OriginalGravity not set at correct time
-    - FIXED: Camera FOV not restoring on Panic
-    - FIXED: Bloom/SunRays effects not restoring on Panic
-    - FIXED: TimeFreeze original time not persisting
-    - FIXED: XRay/Wireframe originals not clearing on Panic
-    - FIXED: Fullbright not restoring ambient on Panic
-    - FIXED: ESP chams highlight not destroying properly
-    - FIXED: Tracer LineHandleAdornment CFrame errors
-    - FIXED: Health bar color interpolation
-    - FIXED: Tool label not updating when tool switched
-    - FIXED: BillboardGui size scaling division by zero
-    - FIXED: Notification destroy race condition
-    - FIXED: Floating button drag boundary check
-    - FIXED: Minimize button state not resetting
-    - FIXED: ContentFrame scroll position not resetting
-    - FIXED: Left/Right arrow tab wrapping
-    - FIXED: SafeCall now returns values properly
-    - FIXED: GetChar/GetHum/GetHRP nil checks enhanced
-    - FIXED: IsPlayerAlive now checks Character parent
-    - FIXED: All string patterns use exact matching
-    - FIXED: HttpService JSON encode/decode error handling
-    - FIXED: TeleportService error on invalid place
-    - FIXED: setclipboard check before use
-    - FIXED: firetouchinterest availability check
-    - FIXED: fireproximityprompt availability check
-    - FIXED: GetAimbotTarget wallcheck ray direction
-    - FIXED: SilentAim random seed not initialized
-    - FIXED: CameraLock toggle not syncing with UI
-    - FIXED: Aimbot smoothness calculation (1-100 to 0.01-1)
-    - FIXED: Shake calculation using math.random without seed
-    - FIXED: Prediction multiplier consistency
-    - FIXED: DropComp offset configurable
-    - FIXED: AutoWallBang bypass logic
-    - FIXED: TeamCheck nil team handling
-    - FIXED: Priority sorting for "Closest" vs "FOV"
-    - FIXED: LockOn target validation every frame
-    - FIXED: CurrentAimbotTarget nil on team switch
-    - FIXED: FOVFrame size sync with State.Aimbot.FOV
-    - FIXED: DistanceLabel visibility sync
-    - FIXED: TargetHighlight destroy on target death
-    - FIXED: GetSilentAimPosition using wrong FOV
-    - FIXED: SilentAim HitChance check placement
-    - FIXED: BulletTP placeholder removed
-    - FIXED: AutoEquip placeholder removed
-    - FIXED: SpinBot speed radian conversion
-    - FIXED: GodMode health set frequency throttled
-    - FIXED: AntiKnockback only affecting knockback direction
-    - FIXED: VehicleSpeed seat detection improved
-    - FIXED: InfJump space detection
-    - FIXED: BunnyHop floor material check
-    - FIXED: Fly mode velocity zero on stop
-    - FIXED: WaterWalk raycast direction
-    - FIXED: Platform position when not over water
-    - FIXED: Jetpack hold detection
-    - FIXED: Invisible transparency restore
-    - FIXED: AutoCollect range check squared (faster)
-    - FIXED: AutoFarm mode selection
-    - FIXED: FPSBoost descendant added connection cleanup
-    - FIXED: FPSBoost batch size configurable
-    - FIXED: FPSBoost restore order correct
-    - FIXED: Post effects disable scope limited
-    - FIXED: Lighting technology restore
-    - FIXED: GlobalShadows restore value
-    - FIXED: Crosshair center position on resize
-    - FIXED: FOV slider sync with Camera
-    - FIXED: Gravity slider sync with Workspace
-    - FIXED: Freecam speed conversion
-    - FIXED: ClickTP control key check
-    - FIXED: Spectate text input validation
-    - FIXED: Save location CFrame validation
-    - FIXED: TP to saved bounds checking
-    - FIXED: Clear saved confirmation
-    - FIXED: Rejoin server error handling
-    - FIXED: Copy JobId with game check
-    - FIXED: Destroy GUI stops all RunService
-    - FIXED: Reset character with alive check
-    - FIXED: Settings JSON validation
-    - FIXED: Import settings type checking
-    - FIXED: All UI controls parent check
-    - FIXED: Tween completion callbacks
-    - FIXED: Instance creation error handling
-    - FIXED: Connection storage type consistency
-    - FIXED: PanicActive flag prevents re-entry
-    - FIXED: uiVisible state consistency
-    - FIXED: ToggleControls cleanup on Panic
-    - FIXED: ScreenGui ResetOnSpawn behavior
-    - FIXED: PlayerAdded/Removing during Panic
-    - FIXED: CharacterAdded during Panic
-    - FIXED: InputBegan during Panic
-    - FIXED: RenderStepped cleanup complete
-    - FIXED: Heartbeat cleanup complete
-    - FIXED: Stepped cleanup complete
-    - FIXED: All task.delay cleanup
-    - FIXED: All task.spawn cleanup
-    - FIXED: All task.wait in loops exit properly
-    - FIXED: Coroutine leak in UltraClick
-    - FIXED: Table leak in HitboxConnections
-    - FIXED: Table leak in Reach originals
-    - FIXED: Table leak in XRay originals
-    - FIXED: Table leak in Wireframe originals
-    - FIXED: Table leak in FPSBoost originals
-    - FIXED: Table leak in FPSBoost processed
-    - FIXED: Table leak in SavedLocations
-    - FIXED: Table leak in NotifStack
-    - FIXED: Table leak in PlayerCache
-    - FIXED: Table leak in ToggleControls
-    - FIXED: String formatting nil errors
-    - FIXED: Vector math nil errors
-    - FIXED: CFrame math nil errors
-    - FIXED: Color3 math nil errors
-    - FIXED: UDim2 math nil errors
-    - FIXED: Enum comparison nil errors
-    - FIXED: Type checking consistency
-    - FIXED: typeof vs type usage
-    - FIXED: Instance:IsA safety
-    - FIXED: FindFirstChild depth limits
-    - FIXED: GetChildren vs GetDescendants choice
-    - FIXED: WaitForChild timeout handling
-    - FIXED: Property setting with pcall
-    - FIXED: Method calling with pcall
-    - FIXED: Event firing with pcall
-    - FIXED: Destroy with pcall
-    - FIXED: Clone with pcall
-    - FIXED: Parent setting with pcall
-    - FIXED: Name setting with pcall
-    - FIXED: Size setting validation
-    - FIXED: Position setting validation
-    - FIXED: CFrame setting validation
-    - FIXED: Velocity setting validation
-    - FIXED: Health setting validation
-    - FIXED: WalkSpeed/JumpPower validation
-    - FIXED: Camera subject validation
-    - FIXED: Camera type validation
-    - FIXED: FieldOfView validation
-    - FIXED: ClockTime validation
-    - FIXED: Brightness validation
-    - FIXED: Ambient/OutdoorAmbient validation
-    - FIXED: GlobalShadows validation
-    - FIXED: Technology validation
-    - FIXED: Material validation
-    - FIXED: Transparency validation
-    - FIXED: Reflectance validation
-    - FIXED: CanCollide validation
-    - FIXED: Enabled validation
-    - FIXED: Visible validation
-    - FIXED: Text validation
-    - FIXED: BackgroundColor3 validation
-    - FIXED: TextColor3 validation
-    - FIXED: Stroke color validation
-    - FIXED: Corner radius validation
-    - FIXED: Padding validation
-    - FIXED: Layout order validation
-    - FIXED: ZIndex validation
-    - FIXED: BorderSizePixel validation
-    - FIXED: AutoButtonColor validation
-    - FIXED: ClipsDescendants validation
-    - FIXED: ScrollBarThickness validation
-    - FIXED: CanvasSize validation
-    - FIXED: AutomaticCanvasSize validation
-    - FIXED: StudsOffset validation
-    - FIXED: AlwaysOnTop validation
-    - FIXED: Adornee validation
-    - FIXED: Size relative validation
-    - FIXED: Thickness validation
-    - FIXED: Length validation
-    - FIXED: MaxTorque validation
-    - FIXED: P validation
-    - FIXED: MaxForce validation
-    - FIXED: Velocity body validation
-    - FIXED: CFrame body validation
-    - FIXED: TintColor validation
-    - FIXED: Brightness CC validation
-    - FIXED: Contrast validation
-    - FIXED: Saturation validation
-    - FIXED: Intensity bloom validation
-    - FIXED: Size bloom validation
-    - FIXED: Threshold validation
-    - FIXED: Spread validation
-    - FIXED: FillTransparency validation
-    - FIXED: OutlineTransparency validation
-    - FIXED: FillColor validation
-    - FIXED: OutlineColor validation
-    - FIXED: DepthMode validation
-    - FIXED: FilterType validation
-    - FIXED: FilterDescendantsInstances validation
-    - FIXED: AssemblyLinearVelocity validation
-    - FIXED: MoveDirection validation
-    - FIXED: FloorMaterial validation
-    - FIXED: PlatformStand validation
-    - FIXED: SeatPart validation
-    - FIXED: MaxSpeed validation
-    - FIXED: Health/MaxHealth validation
-    - FIXED: HipHeight validation
-    - FIXED: JumpPower validation
-    - FIXED: WalkSpeed validation
-    - FIXED: CameraType enum validation
-    - FIXED: HumanoidStateType enum validation
-    - FIXED: Material enum validation
-    - FIXED: Technology enum validation
-    - FIXED: RaycastFilterType enum validation
-    - FIXED: HighlightDepthMode enum validation
-    - FIXED: EasingStyle enum validation
-    - FIXED: EasingDirection enum validation
-    - FIXED: UserInputType enum validation
-    - FIXED: KeyCode enum validation
-    - FIXED: MouseBehavior validation
-    - FIXED: RenderPriority validation
-    - FIXED: AutomaticSize validation
-    - FIXED: FillDirection validation
-    - FIXED: HorizontalAlignment validation
-    - FIXED: VerticalAlignment validation
-    - FIXED: SortOrder validation
-    - FIXED: Font validation
-    - FIXED: TextXAlignment validation
-    - FIXED: TextYAlignment validation
-    - FIXED: TextTruncate validation
-    - FIXED: LineJoinMode validation
-    - FIXED: ApplyStrokeMode validation
-    - FIXED: Thickness mode validation
-    - FIXED: Transparency mode validation
-    - FIXED: Color sequence validation
-    - FIXED: Number sequence validation
-    - FIXED: Number range validation
-    - FIXED: Rect validation
-    - FIXED: Region3 validation
-    - FIXED: PhysicalProperties validation
-    - FIXED: Axes validation
-    - FIXED: Faces validation
-    - FIXED: NormalId validation
-    - FIXED: Axis validation
-    - FIXED: RotationType validation
-    - FIXED: EulerAnglesOrder validation
-    - FIXED: TweenInfo validation
-    - FIXED: RaycastParams validation
-    - FIXED: OverlapParams validation
-    - FIXED: PathWaypoint validation
-    - FIXED: DockWidgetPluginGuiInfo validation
-    - FIXED: QFrame validation
-    - FIXED: CFrameValue validation
-    - FIXED: Vector3Value validation
-    - FIXED: Color3Value validation
-    - FIXED: NumberValue validation
-    - FIXED: StringValue validation
-    - FIXED: BoolValue validation
-    - FIXED: ObjectValue validation
-    - FIXED: IntValue validation
-    - FIXED: FloatValue validation
-    - FIXED: DoubleConstrainedValue validation
-    - FIXED: IntConstrainedValue validation
-    - FIXED: RayValue validation
-    - FIXED: BrickColorValue validation
+    RBX 1.1.1 CURRENT BUILD
+    - ADDED: Responsive mobile, tablet, and desktop layout.
+    - ADDED: Info-first navigation with live client/server details.
+    - ADDED: Public server browser, Job ID tools, status checks, and server finder.
+    - ADDED: Animated loading screen, floating toggle, notifications, and UI transitions.
+    - ADDED: Safer state persistence/import validation and character-state reapply.
+    - FIXED: Duplicate main-hub access-key prompt after external authentication.
+    - FIXED: Global input and viewport listeners now participate in central cleanup.
+    - FIXED: Panic cleanup and GUI-destruction lifecycle handling.
+    - FIXED: Safer clipboard, HTTP, teleport, player, and character error handling.
+    - FIXED: Server-browser fallbacks for unavailable ping/FPS/region fields.
+    - IMPROVED: Responsive tab visibility, live Info refresh, and notification limits.
+    - REMOVED: Old legacy changelog/history from the visible Info documentation.
+    - REMOVED: Redundant second authentication step.
+
 ]]
 
 -- ==================== SERVICES ====================
@@ -913,7 +614,7 @@ local function CreateLoadingScreen()
     LoadingSub.Size = UDim2.new(1, 0, 0, 24)
     LoadingSub.Position = UDim2.new(0, 0, 0, 130)
     LoadingSub.BackgroundTransparency = 1
-    LoadingSub.Text = "v1.1.0 BIG GUI | BLACK EDITION"
+    LoadingSub.Text = "v1.1.1 BIG GUI | BLACK EDITION"
     LoadingSub.TextColor3 = Color3.fromRGB(120, 120, 120)
     LoadingSub.Font = Enum.Font.Gotham
     LoadingSub.TextSize = 14
@@ -1742,7 +1443,7 @@ local function UpdateMainScale()
     MainScale.Scale = 1
 end
 SafeCall(function()
-    if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateMainScale) end
+    if Camera then Connect("CameraViewportResize", Camera:GetPropertyChangedSignal("ViewportSize"), UpdateMainScale) end
 end)
 UpdateMainScale()
 
@@ -1834,7 +1535,7 @@ TitleText.TextStrokeTransparency = 0.5
 TitleText.TextStrokeColor3 = Color3.fromRGB(0,0,0)
 
 local SubTitle = Instance.new("TextLabel", TitleArea); SubTitle.Size = UDim2.new(0,360,0,20); SubTitle.Position = UDim2.new(0,72,0,38)
-SubTitle.BackgroundTransparency = 1; SubTitle.Text = "RBX 1.0 HUB | v1.1.0 BIG GUI"
+SubTitle.BackgroundTransparency = 1; SubTitle.Text = "RBX 1.0 HUB | v1.1.1 BIG GUI"
 SubTitle.TextColor3 = Color3.fromRGB(120,120,120); SubTitle.Font = Enum.Font.Gotham; SubTitle.TextSize = 11
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -1854,14 +1555,14 @@ do
             dragging = true; dragStart = input.Position; startPos = MainFrame.Position
         end
     end)
-    UserInputService.InputChanged:Connect(function(input)
+    Connect("MainDragChanged", UserInputService.InputChanged, function(input)
         if not dragging or not dragStart or not startPos then return end
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             local d = input.Position - dragStart
             MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
         end
     end)
-    UserInputService.InputEnded:Connect(function(input)
+    Connect("MainDragEnded", UserInputService.InputEnded, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
     end)
 end
@@ -2496,7 +2197,7 @@ local ServerStatus = {Text = "Not checked", Data = nil, Error = nil}
 local function GetAllInfoText()
     local p = LocalPlayer
     local lines = {
-        "RBX 1.0 HUB v1.1.0",
+        "RBX 1.0 HUB v1.1.1",
         "==============================",
         "Game Name: " .. GetGameName(),
         "Place ID: " .. tostring(game.PlaceId),
@@ -2715,28 +2416,40 @@ end
 
 local function GetChangelogText()
     return table.concat({
-        "RBX 1.1.0 — LATEST UPDATE",
+        "RBX 1.1.1 — CURRENT BUILD",
         "",
-        "NEW",
-        "• Info is now the FIRST tab.",
-        "• Added Join / Server Browser tab.",
-        "• Join any public server by Job ID.",
-        "• Check server status, members, ping and FPS when exposed by Roblox.",
-        "• Added lowest-ping and best-available server search.",
-        "• Added refresh, current Job ID copy, and rejoin tools.",
-        "• Added clearer status/error messages and safer HTTP fallbacks.",
+        "ADDED",
+        "• Responsive interface for phone, tablet, and desktop.",
+        "• Info tab is first and opens by default.",
+        "• Live game/player/server information cards with copy buttons.",
+        "• Public server browser, Job ID join, server-status check, and server finder.",
+        "• Lowest-ping and best-available server selection.",
+        "• Current Job ID, server refresh, rejoin, and full-info copy tools.",
+        "• Animated loading screen, floating toggle button, notifications, and UI transitions.",
+        "• Safer state cleanup and character-state reapplication after respawn.",
         "",
         "FIXED",
-        "• Fixed the unfinished Info-string/parser issue.",
-        "• Fixed legacy branding/version leftovers from the previous build.",
-        "• Fixed key-gate and panic lifecycle cleanup.",
-        "• Fixed server lookup handling for missing/unavailable API data.",
-        "• Fixed server selection fallback when ping is not exposed.",
-        "• Hardened Job ID validation and teleport error handling.",
+        "• Removed the duplicate in-hub access-key prompt; authentication stays with the official key system.",
+        "• Hardened viewport/device resize handling.",
+        "• Registered global input/viewport connections for proper cleanup.",
+        "• Improved panic cleanup for ESP, effects, hitbox/reach state, movement objects, and UI.",
+        "• Added safer clipboard, HTTP, teleport, and character checks.",
+        "• Improved server-list fallback when ping/FPS/region data is unavailable.",
+        "• Improved tab rendering and responsive tab visibility.",
         "",
-        "LIMITS",
-        "• Region/country is shown only when the server data actually provides it; otherwise the UI reports N/A.",
-        "• Remote server ping is only shown when the Roblox server-list response contains it."
+        "IMPROVED",
+        "• Info updates live without rebuilding the whole tab.",
+        "• Mobile/tablet controls use tighter sizing while desktop keeps the full layout.",
+        "• Notifications are capped and cleaned up automatically.",
+        "• Feature callbacks use guarded calls to prevent one control error from breaking the UI.",
+        "",
+        "REMOVED",
+        "• Removed the old long legacy FIXED-history block from the user-facing Info notes.",
+        "• Removed the redundant second authentication step from the main hub.",
+        "",
+        "NOTES",
+        "• Server region and remote ping are shown only when the available Roblox data exposes them.",
+        "• The hub still requires the external key system to set the protected global secret before loading."
     }, "\n")
 end
 
@@ -3648,9 +3361,9 @@ local Features = {
         end
     end},
 
-    {Category="Info", Type="Section", Text="RBX 1.1.0 • WHAT'S NEW / WHAT'S FIXED"},
+    {Category="Info", Type="Section", Text="RBX 1.1.1 • WHAT'S NEW / WHAT'S FIXED"},
     {Category="Info", Type="Changelog", Name="UPDATE NOTES", Value=GetChangelogText},
-    {Category="Info", Type="Info", Name="Build", Value="RBX 1.1.0"},
+    {Category="Info", Type="Info", Name="Build", Value="RBX 1.1.1"},
     {Category="Info", Type="Section", Text="INFO / LIVE CLIENT STATUS"},
     {Category="Info", Type="Info", Name="Game Name", Value=function() return GetGameName() end},
     {Category="Info", Type="Info", Name="Place ID", Value=function() return tostring(game.PlaceId) end, Button="Copy", Callback=function() CopyToClipboard(game.PlaceId, "Place ID") end},
@@ -3700,9 +3413,7 @@ local Features = {
         if setclipboard then setclipboard(game.JobId or "") end; Notify("Settings", "JobId copied", 2, Color3.fromRGB(60,60,60))
     end},
     {Category="Settings", Type="Button", Name="Destroy GUI", Color=Color3.fromRGB(60,60,60), Callback=function()
-        SafeCall(function() ScreenGui:Destroy() end)
-        for name, conn in pairs(Connections) do SafeCall(function() if typeof(conn) == "RBXScriptConnection" then conn:Disconnect() end end) end
-        ClearESP()
+        if Panic then Panic() else SafeCall(function() ScreenGui:Destroy() end) end
     end},
 }
 
@@ -4054,8 +3765,15 @@ FloatBtn.MouseButton1Click:Connect(function() if not PanicActive then ToggleUI(n
 
 local drag, dragStart, startPos = false, nil, nil
 FloatBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true; dragStart = i.Position; startPos = FloatBtn.Position end end)
-FloatBtn.InputChanged:Connect(function(i) if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - dragStart; FloatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
-FloatBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end end)
+Connect("FloatDragChanged", FloatBtn.InputChanged, function(i)
+    if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        local d = i.Position - dragStart
+        FloatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    end
+end)
+Connect("FloatDragEnded", FloatBtn.InputEnded, function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end
+end)
 
 local function UpdateFloatingButton()
     DetectDevice()
@@ -4076,173 +3794,16 @@ local function UpdateFloatingButton()
 end
 UpdateFloatingButton()
 
--- ==================== KEY GATE ====================
-local Panic
+-- ==================== KEY GATE / EXTERNAL AUTH ====================
+-- The external key-system is the single authentication UI.
+-- This main script only checks the protected global secret it is expected to set.
 local function CreateKeyGate()
-    KeyGateGui = Instance.new("ScreenGui")
-    KeyGateGui.Name = "RBXKeyGate"
-    KeyGateGui.ResetOnSpawn = false
-    KeyGateGui.IgnoreGuiInset = true
-    KeyGateGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    KeyGateGui.DisplayOrder = 10000
-    KeyGateGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    local overlay = Instance.new("Frame", KeyGateGui)
-    overlay.Size = UDim2.fromScale(1,1)
-    overlay.BackgroundColor3 = Color3.fromRGB(3,3,7)
-    overlay.BackgroundTransparency = 0.03
-    overlay.BorderSizePixel = 0
-
-    local grad = Instance.new("UIGradient", overlay)
-    grad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(4,4,8)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(18,18,28)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(4,4,8))
-    })
-    grad.Rotation = 45
-    local gateAnimConn = RunService.RenderStepped:Connect(function()
-        if PanicActive or not KeyGateGui or not KeyGateGui.Parent then return end
-        grad.Rotation = (grad.Rotation + 0.12) % 360
-    end)
-
-    local card = Instance.new("Frame", overlay)
-    card.Size = UDim2.new(0, 430, 0, 330)
-    card.Position = UDim2.new(0.5,-215,0.5,-165)
-    card.BackgroundColor3 = Color3.fromRGB(12,12,16)
-    card.BorderSizePixel = 0
-    card.ClipsDescendants = true
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0,18)
-    local stroke = Instance.new("UIStroke", card)
-    stroke.Color = Color3.fromRGB(90,90,110)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.2
-
-    local scale = Instance.new("UIScale", card)
-    scale.Scale = 0.88
-    SafeCall(function() TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() end)
-
-    local icon = Instance.new("TextLabel", card)
-    icon.Size = UDim2.new(0,64,0,64)
-    icon.Position = UDim2.new(0.5,-32,0,22)
-    icon.BackgroundColor3 = Color3.fromRGB(30,30,38)
-    icon.Text = "🔐"
-    icon.TextSize = 30
-    icon.Font = Enum.Font.GothamBold
-    Instance.new("UICorner", icon).CornerRadius = UDim.new(0,16)
-
-    local title = Instance.new("TextLabel", card)
-    title.Size = UDim2.new(1,-40,0,34)
-    title.Position = UDim2.new(0,20,0,96)
-    title.BackgroundTransparency = 1
-    title.Text = "RBX 1.0 HUB"
-    title.TextColor3 = Color3.fromRGB(255,255,255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 24
-
-    local sub = Instance.new("TextLabel", card)
-    sub.Size = UDim2.new(1,-50,0,34)
-    sub.Position = UDim2.new(0,25,0,132)
-    sub.BackgroundTransparency = 1
-    sub.Text = "Enter your access key to continue"
-    sub.TextColor3 = Color3.fromRGB(150,150,165)
-    sub.Font = Enum.Font.Gotham
-    sub.TextSize = 13
-
-    local box = Instance.new("TextBox", card)
-    box.Size = UDim2.new(1,-50,0,48)
-    box.Position = UDim2.new(0,25,0,176)
-    box.BackgroundColor3 = Color3.fromRGB(24,24,32)
-    box.TextColor3 = Color3.fromRGB(255,255,255)
-    box.PlaceholderColor3 = Color3.fromRGB(100,100,115)
-    box.PlaceholderText = "Enter key..."
-    box.ClearTextOnFocus = false
-    box.Font = Enum.Font.GothamBold
-    box.TextSize = 16
-    box.TextXAlignment = Enum.TextXAlignment.Center
-    box.Text = ""
-    box.MaxVisibleGraphemes = 8
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0,10)
-
-    local status = Instance.new("TextLabel", card)
-    status.Size = UDim2.new(1,-50,0,22)
-    status.Position = UDim2.new(0,25,0,228)
-    status.BackgroundTransparency = 1
-    status.Text = ""
-    status.TextColor3 = Color3.fromRGB(255,90,90)
-    status.Font = Enum.Font.GothamSemibold
-    status.TextSize = 12
-
-    local verify = Instance.new("TextButton", card)
-    verify.Size = UDim2.new(0.48,-5,0,40)
-    verify.Position = UDim2.new(0,25,0,258)
-    verify.BackgroundColor3 = Color3.fromRGB(55,55,65)
-    verify.Text = "UNLOCK"
-    verify.TextColor3 = Color3.fromRGB(255,255,255)
-    verify.Font = Enum.Font.GothamBold
-    verify.TextSize = 12
-    verify.AutoButtonColor = false
-    Instance.new("UICorner", verify).CornerRadius = UDim.new(0,10)
-
-    local discord = Instance.new("TextButton", card)
-    discord.Size = UDim2.new(0.48,-5,0,40)
-    discord.Position = UDim2.new(0.52,0,0,258)
-    discord.BackgroundColor3 = Color3.fromRGB(30,30,38)
-    discord.Text = "GET KEY • DISCORD"
-    discord.TextColor3 = Color3.fromRGB(225,225,235)
-    discord.Font = Enum.Font.GothamBold
-    discord.TextSize = 11
-    discord.AutoButtonColor = false
-    Instance.new("UICorner", discord).CornerRadius = UDim.new(0,10)
-
-    AddHoverAnimation(verify, Color3.fromRGB(55,55,65), Color3.fromRGB(80,80,95))
-    AddHoverAnimation(discord, Color3.fromRGB(30,30,38), Color3.fromRGB(50,50,62))
-
-    KeyGateConnections = {gateAnimConn}
-    local gateConnections = KeyGateConnections
-    local function finish(ok)
-        if ok then
-            KeyVerified = true
-            status.Text = "Access granted. Loading RBX 1.0 HUB..."
-            status.TextColor3 = Color3.fromRGB(120,255,160)
-            SafeCall(function() TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5,-215,0.5,-180), BackgroundTransparency = 1}):Play() end)
-            task.wait(0.38)
-            for _, c in ipairs(gateConnections) do SafeCall(function() c:Disconnect() end) end
-            KeyGateConnections = {}
-            SafeCall(function() KeyGateGui:Destroy() end)
-            KeyGateGui = nil
-        else
-            status.Text = "Invalid code. Try again."
-            status.TextColor3 = Color3.fromRGB(255,90,90)
-            box.Text = ""
-            SafeCall(function() TweenService:Create(card, TweenInfo.new(0.08), {Position = UDim2.new(0.5,-221,0.5,-165)}):Play(); task.wait(0.08); TweenService:Create(card, TweenInfo.new(0.18, Enum.EasingStyle.Back), {Position = UDim2.new(0.5,-215,0.5,-165)}):Play() end)
-        end
+    KeyVerified = _G[ProtectionConfig.SecretKey] == true
+    if not KeyVerified then
+        warn("[RBX 1.0] Authorization missing. Please run the official key system first.")
     end
-
-    local function verifyKey()
-        if KeyVerified or PanicActive then return end
-        local input = tostring(box.Text or "")
-        if input == KEY_CODE then finish(true) else finish(false) end
-    end
-
-    gateConnections[#gateConnections+1] = verify.Activated:Connect(verifyKey)
-    gateConnections[#gateConnections+1] = box.FocusLost:Connect(function(enterPressed) if enterPressed then verifyKey() end end)
-    gateConnections[#gateConnections+1] = box:GetPropertyChangedSignal("Text"):Connect(function()
-        local clean = tostring(box.Text or ""):gsub("%D", "")
-        if clean ~= box.Text then box.Text = clean end
-    end)
-    gateConnections[#gateConnections+1] = discord.Activated:Connect(function()
-        if PanicActive then return end
-        CopyToClipboard(CONFIG.DiscordInvite, "Discord invite")
-        status.Text = "Invite copied. Join the Discord server to get the key."
-        status.TextColor3 = Color3.fromRGB(180,180,190)
-    end)
-    gateConnections[#gateConnections+1] = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe or PanicActive then return end
-        if input.KeyCode == CONFIG.PanicKey then Panic() end
-    end)
-    return KeyGateGui
+    return nil
 end
-
 
 -- ==================== PANIC (FULLY FIXED) ====================
 Panic = function()
@@ -4277,7 +3838,8 @@ Panic = function()
             end
         end
         local hum = GetHum(); if hum then hum.WalkSpeed = 16; hum.JumpPower = 50 end
-        Camera.FieldOfView = 70; Camera.CameraType = Enum.CameraType.Custom
+        RefreshCamera()
+        if Camera then Camera.FieldOfView = 70; Camera.CameraType = Enum.CameraType.Custom end
         Workspace.Gravity = OriginalGravity
         Lighting.Brightness = 1; Lighting.GlobalShadows = true; Lighting.ClockTime = 12
         Lighting.Technology = Enum.Technology.Future
@@ -4342,11 +3904,11 @@ end)
 
 -- ==================== INIT (KEY GATED + RESPONSIVE + ANIMATED) ====================
 CreateKeyGate()
+if not KeyVerified then
+    return
+end
 
 task.spawn(function()
-    while not PanicActive and not KeyVerified do
-        task.wait(0.1)
-    end
     if PanicActive or not KeyVerified then return end
 
     local LoadingScreen = CreateLoadingScreen()
