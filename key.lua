@@ -20,6 +20,20 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
+local useNonce = true
+
+local function SafeCall(fn, ...)
+    if type(fn) ~= "function" then return false, "Not a function" end
+    local args = table.pack(...)
+    local ok, result = pcall(function()
+        return fn(table.unpack(args, 1, args.n))
+    end)
+    if not ok then
+        warn("[RBX GET KEY] " .. tostring(result))
+    end
+    return ok, result
+end
+
 local Config = {
     -- [1] PlatoBoost Settings
     ServiceId       = 31611, -- Your PlatoBoost Service ID
@@ -76,18 +90,22 @@ local lEncode, lDecode, lDigest = a3, aw, Z;
 --! CORE FUNCTIONS (REQUESTS & VERIFICATION)
 -------------------------------------------------------------------------------
 
-local useNonce = true 
 
 local function safeRequest(options)
-    local req = request or http_request or syn_request or (http and http.request )
-    if not req then return nil, "HTTP requests not supported" end
-    local success, response = pcall(function() return req(options) end)
-    if success and type(response) == "table" then 
-        return response 
-    else 
-       
-        return nil, "Connection Error: " .. tostring(response or "Unknown") 
+    local req = nil
+    pcall(function()
+        if type(request) == "function" then req = request
+        elseif type(http_request) == "function" then req = http_request
+        elseif type(syn_request) == "function" then req = syn_request
+        elseif type(http) == "table" and type(http.request) == "function" then req = http.request
+        end
+    end)
+    if not req then return nil, "HTTP requests not supported by this executor" end
+    local success, response = pcall(req, options)
+    if success and type(response) == "table" then
+        return response
     end
+    return nil, "Connection Error: " .. tostring(response or "Unknown")
 end
 
 local fSetClipboard = setclipboard or toclipboard
@@ -178,6 +196,14 @@ local host = "https://api.platoboost.com"
 
 local function trim(value)
     return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function IsTouchDevice()
+    local enabled = false
+    pcall(function()
+        enabled = UserInputService and UserInputService.TouchEnabled == true
+    end)
+    return enabled
 end
 
 local function CreateLootLabsLink(destinationUrl)
@@ -278,9 +304,9 @@ local function cacheLink()
             Body = lEncode({service = Config.ServiceId, identifier = lDigest(fGetHwid())}),
             Headers = {["Content-Type"] = "application/json"}
         })
-        if response and response.StatusCode == 200 then
-            local decoded = lDecode(response.Body)
-            if decoded.success then
+        if response and tonumber(response.StatusCode or response.Status) == 200 then
+            local decodedOk, decoded = pcall(lDecode, response.Body or response.body or "")
+            if decodedOk and type(decoded) == "table" and decoded.success then
                 cachedLink = decoded.data.url
                 cachedTime = fOsTime()
                 return true, cachedLink
@@ -303,9 +329,12 @@ local function redeemKey(key)
         Headers = {["Content-Type"] = "application/json"}
     })
     
-    if response and response.StatusCode == 200 then
-        local decoded = lDecode(response.Body)
-        if decoded.success and decoded.data.valid then
+    if response and tonumber(response.StatusCode or response.Status) == 200 then
+        local decodedOk, decoded = pcall(lDecode, response.Body or response.body or "")
+        if not decodedOk or type(decoded) ~= "table" then
+            return false, "Invalid server response"
+        end
+        if decoded.success and decoded.data and decoded.data.valid then
             if useNonce then
                 if decoded.data.hash == lDigest("true" .. "-" .. nonce .. "-" .. Config.PlatoSecret) then 
                     local saved, saveErr = SaveKeyToFile(key)
@@ -326,20 +355,47 @@ end
 -------------------------------------------------------------------------------
 
 local function StartMainScript()
-    local player = game:GetService("Players").LocalPlayer
-    local pGui = player:WaitForChild("PlayerGui")
-    
-    if pGui:FindFirstChild(Config.OldGuiName) then 
-        pGui[Config.OldGuiName]:Destroy() 
+    local player = Players.LocalPlayer
+    if not player then return false, "LocalPlayer unavailable" end
+
+    local pGui = player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 5)
+    if pGui and pGui:FindFirstChild(Config.OldGuiName) then
+        pGui[Config.OldGuiName]:Destroy()
         task.wait(0.1)
     end
-    
-    _G[Config.Secret] = true 
-    
-    loadstring(game:HttpGet(Config.MainScriptURL))()
+
+    _G[Config.Secret] = true
+
+    if type(loadstring) ~= "function" then
+        return false, "loadstring is unavailable in this executor"
+    end
+
+    local ok, source = pcall(function()
+        if type(game.HttpGet) == "function" then
+            return game:HttpGet(Config.MainScriptURL)
+        end
+        return nil
+    end)
+    if not ok or type(source) ~= "string" or source == "" then
+        return false, "Could not download the main script"
+    end
+
+    local loader, compileErr = loadstring(source)
+    if type(loader) ~= "function" then
+        return false, "Main script compile failed: " .. tostring(compileErr)
+    end
+
+    local runOk, runErr = pcall(loader)
+    if not runOk then
+        return false, "Main script error: " .. tostring(runErr)
+    end
+    return true
 end
 
-local function CreateGUI()
+local function local guiOk, guiErr = pcall(CreateGUI)
+if not guiOk then
+    warn("[RBX GET KEY] GUI failed: " .. tostring(guiErr))
+end
     local player = Players.LocalPlayer
     if not player then
         return nil
@@ -364,8 +420,9 @@ local function CreateGUI()
         return nil
     end
 
-    local old = targetParent:FindFirstChild("RBX_GetKey")
-    if old then old:Destroy() end
+    local old = nil
+    pcall(function() old = targetParent:FindFirstChild("RBX_GetKey") end)
+    if old then pcall(function() old:Destroy() end) end
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "RBX_GetKey"
@@ -376,7 +433,7 @@ local function CreateGUI()
     ScreenGui.Parent = targetParent
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(900, 650)
-    local isMobile = UserInputService.TouchEnabled and viewport.X <= 650
+    local isMobile = IsTouchDevice() and viewport.X <= 650
     local baseW = isMobile and 340 or 430
     local baseH = isMobile and 500 or 455
 
@@ -643,8 +700,14 @@ local function CreateGUI()
             if ok then
                 setStatus("Verified! Launching RBX 1.0 HUB...", Color3.fromRGB(112, 225, 165))
                 task.wait(0.35)
-                if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
-                StartMainScript()
+                local started, startErr = StartMainScript()
+                if started then
+                    if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+                else
+                    setStatus(startErr or "Main script failed to start.", Color3.fromRGB(255, 100, 100))
+                    verify.Text = "VERIFY & UNLOCK"
+                    busy = false
+                end
             else
                 setStatus(msg or "Invalid or expired key.", Color3.fromRGB(255, 100, 100))
                 verify.Text = "VERIFY & UNLOCK"
@@ -682,11 +745,11 @@ local function CreateGUI()
     local viewportConn
     pcall(function()
         local cam = workspace.CurrentCamera
-        if cam then
+        if cam and type(cam.GetPropertyChangedSignal) == "function" then
             viewportConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(function()
                 if not ScreenGui or not ScreenGui.Parent then return end
                 local v = cam.ViewportSize
-                local mobile = UserInputService.TouchEnabled and v.X <= 650
+                local mobile = IsTouchDevice() and v.X <= 650
                 local w = mobile and 340 or 430
                 local h = mobile and 500 or 455
                 card.Size = UDim2.fromOffset(w, h)
@@ -710,8 +773,12 @@ local function CreateGUI()
             if ok then
                 setStatus("Auto-login successful. Launching...", Color3.fromRGB(112, 225, 165))
                 task.wait(0.3)
-                if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
-                StartMainScript()
+                local started, startErr = StartMainScript()
+                if started then
+                    if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+                else
+                    setStatus(startErr or "Main script failed to start.", Color3.fromRGB(255, 100, 100))
+                end
             else
                 setStatus("Saved key is expired or invalid. Enter a new key.", Color3.fromRGB(255, 175, 90))
             end
@@ -724,7 +791,11 @@ end
 
 local player = Players.LocalPlayer
 if not player then return end
-local pGui = player:WaitForChild("PlayerGui")
+local pGui = player:WaitForChild("PlayerGui", 5)
+if not pGui then
+    warn("[RBX GET KEY] PlayerGui is unavailable")
+    return
+end
 
 if pGui:FindFirstChild(Config.MainGuiName) then
     StartMainScript() 
