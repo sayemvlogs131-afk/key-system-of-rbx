@@ -14,6 +14,12 @@
     Copyright (c) 2026 OYB. All rights reserved.
     ================================================================
 ]]
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
 local Config = {
     -- [1] PlatoBoost Settings
     ServiceId       = 31611, -- Your PlatoBoost Service ID
@@ -84,7 +90,14 @@ local function safeRequest(options)
     end
 end
 
-local fSetClipboard = setclipboard or toclipboard or function() end
+local fSetClipboard = setclipboard or toclipboard
+local function CopyToClipboard(value)
+    if type(fSetClipboard) ~= "function" then
+        return false
+    end
+    local ok = pcall(fSetClipboard, value)
+    return ok
+end
 local fStringChar, fToString, fOsTime, fMathRandom, fMathFloor = string.char, tostring, os.time, math.random, math.floor
 local fGetHwid = gethwid or function() return game:GetService("RbxAnalyticsService"):GetClientId() end
 
@@ -327,15 +340,28 @@ local function StartMainScript()
 end
 
 local function CreateGUI()
-    local player = game:GetService("Players").LocalPlayer
-    local coreGui = game:GetService("CoreGui")
-    local targetParent = coreGui
+    local player = Players.LocalPlayer
+    if not player then
+        return nil
+    end
 
+    -- Prefer PlayerGui. Only fall back to CoreGui when PlayerGui cannot be used.
+    local targetParent = nil
     pcall(function()
-        if not targetParent then targetParent = player:WaitForChild("PlayerGui") end
+        targetParent = player:FindFirstChildOfClass("PlayerGui")
     end)
     if not targetParent then
-        targetParent = player:WaitForChild("PlayerGui")
+        pcall(function()
+            targetParent = player:WaitForChild("PlayerGui", 5)
+        end)
+    end
+    if not targetParent then
+        pcall(function()
+            targetParent = CoreGui
+        end)
+    end
+    if not targetParent then
+        return nil
     end
 
     local old = targetParent:FindFirstChild("RBX_GetKey")
@@ -563,7 +589,7 @@ local function CreateGUI()
             setStatus("No link was returned.", Color3.fromRGB(255, 105, 105))
             return false
         end
-        local ok = pcall(fSetClipboard, link)
+        local ok = CopyToClipboard(link)
         if ok then
             setStatus("Link copied! Open it in your browser to continue.", Color3.fromRGB(112, 225, 165))
             return true
@@ -696,7 +722,8 @@ local function CreateGUI()
 
 end
 
-local player = game:GetService("Players").LocalPlayer
+local player = Players.LocalPlayer
+if not player then return end
 local pGui = player:WaitForChild("PlayerGui")
 
 if pGui:FindFirstChild(Config.MainGuiName) then
