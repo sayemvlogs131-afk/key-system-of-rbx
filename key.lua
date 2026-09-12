@@ -43,8 +43,21 @@ local Config = {
     MainGuiName     = "rbx 1.0 hub", -- Name of the main script's GUI to check if it's already executing
 
     -- [7] Hub Information & UI Text
-    HubName         = "rbx 1.0 hub", -- The main title shown at the top of the GUI
-    HubDescription  = "all in one " -- The text shown below the title
+    HubName         = "RBX GET KEY",
+    HubDescription  = "RBX 1.0 HUB • 24H KEY SYSTEM",
+
+    -- [8] LootLabs Wrapper
+    -- LootLabs is used as an outer content locker around the Platoboost URL.
+    -- Put your LootLabs API token here, OR use StaticURL for a pre-created link.
+    LootLabs = {
+        Enabled = true,
+        ApiToken = "",
+        StaticURL = "",
+        TierId = 2,
+        NumberOfTasks = 1,
+        Theme = 5,
+        Title = "RBX 1.0 HUB KEY"
+    }
 }
 
 -------------------------------------------------------------------------------
@@ -75,8 +88,151 @@ local fSetClipboard = setclipboard or toclipboard or function() end
 local fStringChar, fToString, fOsTime, fMathRandom, fMathFloor = string.char, tostring, os.time, math.random, math.floor
 local fGetHwid = gethwid or function() return game:GetService("RbxAnalyticsService"):GetClientId() end
 
+-- ==================== KEY FILE STORAGE (FIXED) ====================
+-- Some executors expose writefile/readfile/isfile only partially.
+-- Never let a storage failure make a valid key look like an invalid key.
+local function SaveKeyToFile(key)
+    key = tostring(key or "")
+    if key == "" then
+        return false, "Empty key"
+    end
+
+    if type(writefile) ~= "function" then
+        return false, "writefile is unavailable in this executor"
+    end
+
+    local ok, err = pcall(function()
+        writefile(Config.KeyFileName, key)
+    end)
+
+    if not ok then
+        return false, "writefile failed: " .. tostring(err)
+    end
+
+    -- Verify the file was actually written when readfile is available.
+    if type(readfile) == "function" then
+        local readOk, saved = pcall(function()
+            return readfile(Config.KeyFileName)
+        end)
+        if not readOk then
+            return false, "Saved, but readback failed: " .. tostring(saved)
+        end
+        if tostring(saved or "") ~= key then
+            return false, "Saved, but readback did not match"
+        end
+    end
+
+    return true, "Saved"
+end
+
+local function LoadSavedKey()
+    if type(isfile) ~= "function" then
+        return nil, "isfile is unavailable in this executor"
+    end
+    if type(readfile) ~= "function" then
+        return nil, "readfile is unavailable in this executor"
+    end
+
+    local existsOk, exists = pcall(function()
+        return isfile(Config.KeyFileName)
+    end)
+    if not existsOk then
+        return nil, "isfile failed: " .. tostring(exists)
+    end
+    if not exists then
+        return nil, "No saved key file"
+    end
+
+    local readOk, saved = pcall(function()
+        return readfile(Config.KeyFileName)
+    end)
+    if not readOk then
+        return nil, "readfile failed: " .. tostring(saved)
+    end
+
+    saved = tostring(saved or "")
+    saved = saved:gsub("^%s+", ""):gsub("%s+$", "")
+    if saved == "" then
+        return nil, "Saved key file is empty"
+    end
+
+    return saved, nil
+end
+
 local cachedLink, cachedTime = "", 0
 local host = "https://api.platoboost.com"
+
+
+local function trim(value)
+    return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function CreateLootLabsLink(destinationUrl)
+    if type(Config.LootLabs) ~= "table" or not Config.LootLabs.Enabled then
+        return false, "LootLabs is disabled"
+    end
+
+    local staticUrl = trim(Config.LootLabs.StaticURL)
+    if staticUrl ~= "" then
+        return true, staticUrl
+    end
+
+    local token = trim(Config.LootLabs.ApiToken)
+    if token == "" then
+        return false, "Add your LootLabs API token in Config.LootLabs.ApiToken"
+    end
+
+    local title = trim(Config.LootLabs.Title)
+    if title == "" then title = "RBX 1.0 HUB KEY" end
+    if #title > 30 then title = title:sub(1, 30) end
+
+    local tier = math.clamp(tonumber(Config.LootLabs.TierId) or 2, 1, 4)
+    local tasks = math.clamp(tonumber(Config.LootLabs.NumberOfTasks) or 1, 1, 5)
+    local theme = math.clamp(tonumber(Config.LootLabs.Theme) or 1, 1, 5)
+
+    local response, err = safeRequest({
+        Url = "https://creators.lootlabs.gg/api/public/content_locker",
+        Method = "POST",
+        Body = lEncode({
+            title = title,
+            url = destinationUrl,
+            tier_id = tier,
+            number_of_tasks = tasks,
+            theme = theme
+        }),
+        Headers = {
+            ["Content-Type"] = "application/json",
+            ["Authorization"] = "Bearer " .. token
+        }
+    })
+
+    if not response then
+        return false, err or "LootLabs request failed"
+    end
+
+    local statusCode = tonumber(response.StatusCode or response.Status)
+    if statusCode and statusCode >= 400 then
+        return false, "LootLabs HTTP " .. tostring(statusCode)
+    end
+
+    local body = response.Body or response.body
+    if not body or body == "" then
+        return false, "LootLabs returned an empty response"
+    end
+
+    local decodedOk, decoded = pcall(lDecode, body)
+    if not decodedOk or type(decoded) ~= "table" then
+        return false, "LootLabs returned invalid JSON"
+    end
+
+    if decoded.type == "created" and type(decoded.message) == "table" then
+        local lootUrl = trim(decoded.message.loot_url)
+        if lootUrl ~= "" then return true, lootUrl end
+    end
+
+    local message = type(decoded.message) == "string" and decoded.message or "LootLabs did not return a link"
+    return false, message
+end
 
 local function checkConnectivity( )
     local response, err = safeRequest({Url = host .. "/public/connectivity", Method = "GET"})
@@ -139,13 +295,13 @@ local function redeemKey(key)
         if decoded.success and decoded.data.valid then
             if useNonce then
                 if decoded.data.hash == lDigest("true" .. "-" .. nonce .. "-" .. Config.PlatoSecret) then 
-                    if writefile then writefile(Config.KeyFileName, key) end
-                    return true, "Success" 
+                    local saved, saveErr = SaveKeyToFile(key)
+                    return true, saved and "Success" or ("Success (save unavailable: " .. tostring(saveErr) .. ")")
                 end
                 return false, "Integrity Check Failed"
             end
-            if writefile then writefile(Config.KeyFileName, key) end
-            return true, "Success"
+            local saved, saveErr = SaveKeyToFile(key)
+            return true, saved and "Success" or ("Success (save unavailable: " .. tostring(saveErr) .. ")")
         end
         return false, decoded.message or "Invalid Key"
     end
@@ -173,256 +329,371 @@ end
 local function CreateGUI()
     local player = game:GetService("Players").LocalPlayer
     local coreGui = game:GetService("CoreGui")
-    local targetParent = pcall(function() return coreGui end) and coreGui or player:WaitForChild("PlayerGui")
-    
-    if targetParent:FindFirstChild("OYB_KeySystem") then targetParent.OYB_KeySystem:Destroy() end
+    local targetParent = coreGui
 
-    local ScreenGui = Instance.new("ScreenGui", targetParent)
-    ScreenGui.Name = "OYB_KeySystem"
+    pcall(function()
+        if not targetParent then targetParent = player:WaitForChild("PlayerGui") end
+    end)
+    if not targetParent then
+        targetParent = player:WaitForChild("PlayerGui")
+    end
+
+    local old = targetParent:FindFirstChild("RBX_GetKey")
+    if old then old:Destroy() end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "RBX_GetKey"
     ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.DisplayOrder = 100000
+    ScreenGui.Parent = targetParent
 
-    local MainFrame = Instance.new("Frame", ScreenGui)
-    MainFrame.Size = UDim2.new(0, 340, 0, 420)
-    MainFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    MainFrame.Active = true;
-    MainFrame.Draggable = true
-    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
-    
-    local mainStroke = Instance.new("UIStroke", MainFrame)
-    mainStroke.Thickness = 2;
-    mainStroke.Color = Color3.fromRGB(40, 40, 40)
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(900, 650)
+    local isMobile = UserInputService.TouchEnabled and viewport.X <= 650
+    local baseW = isMobile and 340 or 430
+    local baseH = isMobile and 500 or 455
 
-    local CloseBtn = Instance.new("TextButton", MainFrame)
-    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-    CloseBtn.Position = UDim2.new(1, -35, 0, 10)
-    CloseBtn.BackgroundTransparency = 1
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.TextSize = 18
-    CloseBtn.ZIndex = 10
-    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+    local backdrop = Instance.new("Frame")
+    backdrop.Size = UDim2.fromScale(1, 1)
+    backdrop.BackgroundColor3 = Color3.fromRGB(3, 4, 8)
+    backdrop.BorderSizePixel = 0
+    backdrop.Parent = ScreenGui
 
-    local Title = Instance.new("TextLabel", MainFrame)
-    Title.Size = UDim2.new(1, 0, 0, 50)
-    Title.Text = Config.HubName
-    Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    Title.TextColor3 = Color3.fromRGB(0, 170, 255)
-    Title.Font = Enum.Font.GothamBold;
-    Title.TextSize = 16
-    Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 15)
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(3, 4, 8)),
+        ColorSequenceKeypoint.new(0.48, Color3.fromRGB(11, 13, 22)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 4, 8))
+    })
+    gradient.Rotation = 25
+    gradient.Parent = backdrop
 
-    local PromoText = Instance.new("TextLabel", MainFrame)
-    PromoText.Size = UDim2.new(0.9, 0, 0, 50)
-    PromoText.Position = UDim2.new(0.05, 0, 0, 50)
-    PromoText.BackgroundTransparency = 1
-    PromoText.Text = Config.HubDescription
-    PromoText.TextColor3 = Color3.fromRGB(0, 170, 255)
-    PromoText.Font = Enum.Font.GothamBold;
-    PromoText.TextSize = 14
-    PromoText.TextWrapped = true
+    local dotFolder = Instance.new("Folder")
+    dotFolder.Name = "AmbientDots"
+    dotFolder.Parent = backdrop
+    local dots = {}
+    for i = 1, 22 do
+        local dot = Instance.new("Frame")
+        local s = math.random(2, 4)
+        dot.Size = UDim2.fromOffset(s, s)
+        dot.Position = UDim2.fromScale(math.random(), math.random())
+        dot.BackgroundColor3 = Color3.fromRGB(100, 110, 135)
+        dot.BackgroundTransparency = 0.88
+        dot.BorderSizePixel = 0
+        Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+        dot.Parent = dotFolder
+        dots[#dots + 1] = {frame = dot, x = math.random(), y = math.random(), speed = 0.02 + math.random() * 0.03}
+    end
 
-    local function AddRainbowStroke(parent)
-        local stroke = Instance.new("UIStroke", parent)
-        stroke.Thickness = 2
-        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    local card = Instance.new("Frame")
+    card.Name = "Card"
+    card.Size = UDim2.fromOffset(baseW, baseH)
+    card.Position = UDim2.new(0.5, -baseW / 2, 0.5, -baseH / 2)
+    card.BackgroundColor3 = Color3.fromRGB(10, 11, 16)
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.Active = true
+    card.Parent = backdrop
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 20)
+
+    local cardStroke = Instance.new("UIStroke", card)
+    cardStroke.Thickness = 1.4
+    cardStroke.Color = Color3.fromRGB(55, 60, 75)
+    cardStroke.Transparency = 0.12
+
+    local scale = Instance.new("UIScale", card)
+    scale.Scale = 0.92
+    SafeCall(function()
+        TweenService:Create(scale, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
+
+    local topGlow = Instance.new("Frame", card)
+    topGlow.Size = UDim2.new(1, 0, 0, 4)
+    topGlow.BackgroundColor3 = Color3.fromRGB(90, 110, 255)
+    topGlow.BorderSizePixel = 0
+
+    local close = Instance.new("TextButton", card)
+    close.Size = UDim2.fromOffset(34, 34)
+    close.Position = UDim2.new(1, -44, 0, 13)
+    close.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
+    close.Text = "×"
+    close.TextColor3 = Color3.fromRGB(190, 195, 210)
+    close.Font = Enum.Font.GothamBold
+    close.TextSize = 21
+    close.AutoButtonColor = false
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0, 10)
+
+    local brand = Instance.new("Frame", card)
+    brand.Size = UDim2.fromOffset(58, 58)
+    brand.Position = UDim2.new(0.5, -29, 0, 22)
+    brand.BackgroundColor3 = Color3.fromRGB(22, 25, 36)
+    Instance.new("UICorner", brand).CornerRadius = UDim.new(0, 17)
+    local brandStroke = Instance.new("UIStroke", brand)
+    brandStroke.Color = Color3.fromRGB(75, 90, 130)
+    brandStroke.Transparency = 0.35
+
+    local brandText = Instance.new("TextLabel", brand)
+    brandText.Size = UDim2.fromScale(1, 1)
+    brandText.BackgroundTransparency = 1
+    brandText.Text = "RBX"
+    brandText.TextColor3 = Color3.fromRGB(240, 245, 255)
+    brandText.Font = Enum.Font.GothamBlack
+    brandText.TextSize = 17
+
+    local title = Instance.new("TextLabel", card)
+    title.Size = UDim2.new(1, -70, 0, 35)
+    title.Position = UDim2.new(0, 35, 0, 88)
+    title.BackgroundTransparency = 1
+    title.Text = "RBX GET KEY"
+    title.TextColor3 = Color3.fromRGB(248, 249, 255)
+    title.Font = Enum.Font.GothamBlack
+    title.TextSize = isMobile and 24 or 27
+    title.TextXAlignment = Enum.TextXAlignment.Center
+
+    local subtitle = Instance.new("TextLabel", card)
+    subtitle.Size = UDim2.new(1, -54, 0, 38)
+    subtitle.Position = UDim2.new(0, 27, 0, 122)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Text = "Get your 24-hour access key below"
+    subtitle.TextColor3 = Color3.fromRGB(145, 150, 168)
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextSize = 13
+    subtitle.TextXAlignment = Enum.TextXAlignment.Center
+
+    local divider = Instance.new("Frame", card)
+    divider.Size = UDim2.new(1, -60, 0, 1)
+    divider.Position = UDim2.new(0, 30, 0, 162)
+    divider.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
+    divider.BorderSizePixel = 0
+
+    local info = Instance.new("TextLabel", card)
+    info.Size = UDim2.new(1, -60, 0, 38)
+    info.Position = UDim2.new(0, 30, 0, 177)
+    info.BackgroundTransparency = 1
+    info.Text = "Tap GET KEY to receive your access link.\nComplete the locker, then paste your 24H key below."
+    info.TextColor3 = Color3.fromRGB(160, 166, 184)
+    info.Font = Enum.Font.GothamSemibold
+    info.TextSize = 11
+    info.TextWrapped = true
+    info.TextXAlignment = Enum.TextXAlignment.Center
+
+    local getBtn = Instance.new("TextButton", card)
+    getBtn.Size = UDim2.new(1, -60, 0, 52)
+    getBtn.Position = UDim2.new(0, 30, 0, 225)
+    getBtn.BackgroundColor3 = Color3.fromRGB(70, 83, 135)
+    getBtn.Text = "GET KEY"
+    getBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    getBtn.Font = Enum.Font.GothamBlack
+    getBtn.TextSize = isMobile and 13 or 14
+    getBtn.AutoButtonColor = false
+    Instance.new("UICorner", getBtn).CornerRadius = UDim.new(0, 13)
+    local getStroke = Instance.new("UIStroke", getBtn)
+    getStroke.Color = Color3.fromRGB(105, 120, 190)
+    getStroke.Transparency = 0.15
+
+    local hint = Instance.new("TextLabel", card)
+    hint.Size = UDim2.new(1, -60, 0, 24)
+    hint.Position = UDim2.new(0, 30, 0, 284)
+    hint.BackgroundTransparency = 1
+    hint.Text = "The link is copied automatically"
+    hint.TextColor3 = Color3.fromRGB(105, 112, 132)
+    hint.Font = Enum.Font.Gotham
+    hint.TextSize = 10
+    hint.TextXAlignment = Enum.TextXAlignment.Center
+
+    local input = Instance.new("TextBox", card)
+    input.Size = UDim2.new(1, -60, 0, 44)
+    input.Position = UDim2.new(0, 30, 0, 318)
+    input.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
+    input.TextColor3 = Color3.fromRGB(248,250,255)
+    input.PlaceholderColor3 = Color3.fromRGB(95,100,118)
+    input.PlaceholderText = "Paste your 24H key here"
+    input.Text = ""
+    input.Font = Enum.Font.GothamSemibold
+    input.TextSize = 13
+    input.TextXAlignment = Enum.TextXAlignment.Center
+    input.ClearTextOnFocus = false
+    input.MaxVisibleGraphemes = 64
+    input.TextTruncate = Enum.TextTruncate.AtEnd
+    Instance.new("UICorner", input).CornerRadius = UDim.new(0, 11)
+    local inputStroke = Instance.new("UIStroke", input)
+    inputStroke.Color = Color3.fromRGB(44, 48, 62)
+    inputStroke.Transparency = 0.1
+
+    local verify = Instance.new("TextButton", card)
+    verify.Size = UDim2.new(1, -60, 0, 42)
+    verify.Position = UDim2.new(0, 30, 0, 374)
+    verify.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
+    verify.Text = "VERIFY & UNLOCK"
+    verify.TextColor3 = Color3.fromRGB(255,255,255)
+    verify.Font = Enum.Font.GothamBlack
+    verify.TextSize = 12
+    verify.AutoButtonColor = false
+    Instance.new("UICorner", verify).CornerRadius = UDim.new(0, 11)
+
+    local status = Instance.new("TextLabel", card)
+    status.Name = "StatusLabel"
+    status.Size = UDim2.new(1, -60, 0, isMobile and 38 or 30)
+    status.Position = UDim2.new(0, 30, 1, isMobile and -44 or -38)
+    status.BackgroundTransparency = 1
+    status.Text = "Ready • tap GET KEY"
+    status.TextColor3 = Color3.fromRGB(130, 136, 152)
+    status.Font = Enum.Font.GothamSemibold
+    status.TextSize = 10
+    status.TextWrapped = true
+    status.TextXAlignment = Enum.TextXAlignment.Center
+
+    if isMobile then
+        getBtn.Position = UDim2.new(0, 30, 0, 225)
+        input.Position = UDim2.new(0, 30, 0, 318)
+        verify.Position = UDim2.new(0, 30, 0, 374)
+    end
+
+    local busy = false
+
+    local function setStatus(text, color)
+        status.Text = tostring(text or "")
+        status.TextColor3 = color or Color3.fromRGB(130, 136, 152)
+    end
+
+    local function copyLink(link)
+        link = trim(link)
+        if link == "" then
+            setStatus("No link was returned.", Color3.fromRGB(255, 105, 105))
+            return false
+        end
+        local ok = pcall(fSetClipboard, link)
+        if ok then
+            setStatus("Link copied! Open it in your browser to continue.", Color3.fromRGB(112, 225, 165))
+            return true
+        end
+        setStatus("Clipboard is unavailable in this executor.", Color3.fromRGB(255, 180, 90))
+        return false
+    end
+
+    local function getKeyLink()
+        if busy then return end
+        busy = true
+        getBtn.Text = "CREATING..."
+        setStatus("Preparing your LootLabs → Platoboost key link...", Color3.fromRGB(180, 190, 215))
+
         task.spawn(function()
-            while task.wait() do
-                local hue = tick() % 5 / 5
-                stroke.Color = Color3.fromHSV(hue, 1, 1)
+            -- One-button flow: create the Platoboost session first, then wrap it
+            -- inside LootLabs so the same GET KEY action uses both systems.
+            local platoOk, platoLink = cacheLink()
+            local ok, link
+            if platoOk then
+                ok, link = CreateLootLabsLink(platoLink)
+            else
+                ok, link = false, platoLink
+            end
+
+            if ok then
+                copyLink(link)
+            else
+                setStatus(tostring(link or "Could not create the key link."), Color3.fromRGB(255, 110, 110))
+            end
+
+            getBtn.Text = "GET KEY"
+            busy = false
+        end)
+    end
+
+    local function verifyKey()
+        if busy then return end
+        local key = trim(input.Text)
+        if key == "" then
+            setStatus("Paste your key first.", Color3.fromRGB(255, 180, 90))
+            return
+        end
+
+        busy = true
+        verify.Text = "VERIFYING..."
+        setStatus("Checking your key with Platoboost...", Color3.fromRGB(180, 190, 215))
+
+        task.spawn(function()
+            local ok, msg = redeemKey(key)
+            if ok then
+                setStatus("Verified! Launching RBX 1.0 HUB...", Color3.fromRGB(112, 225, 165))
+                task.wait(0.35)
+                if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+                StartMainScript()
+            else
+                setStatus(msg or "Invalid or expired key.", Color3.fromRGB(255, 100, 100))
+                verify.Text = "VERIFY & UNLOCK"
+                busy = false
             end
         end)
     end
 
-    local currentYOffset = 105
+    close.Activated:Connect(function()
+        if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+    end)
 
-    if Config.ShowDiscord then
-        local DiscordBtn = Instance.new("TextButton", MainFrame)
-        DiscordBtn.Size = UDim2.new(0.85, 0, 0, 35)
-        DiscordBtn.Position = UDim2.new(0.075, 0, 0, currentYOffset)
-        DiscordBtn.Text = "      JOIN DISCORD"
-        DiscordBtn.Font = "GothamBold";
-        DiscordBtn.TextSize = 14
-        DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-        DiscordBtn.TextColor3 = Color3.new(1, 1, 1)
-        Instance.new("UICorner", DiscordBtn)
-        AddRainbowStroke(DiscordBtn)
+    getBtn.Activated:Connect(getKeyLink)
+    verify.Activated:Connect(verifyKey)
+    input.FocusLost:Connect(function(enterPressed)
+        if enterPressed then verifyKey() end
+    end)
 
-        local DiscordIcon = Instance.new("ImageLabel", DiscordBtn)
-        DiscordIcon.Size = UDim2.new(0, 20, 0, 20)
-        DiscordIcon.Position = UDim2.new(0.1, 0, 0.5, -10)
-        DiscordIcon.BackgroundTransparency = 1
-        DiscordIcon.Image = "rbxassetid://18505728201"
-        
-        DiscordBtn.MouseButton1Click:Connect(function()
-            fSetClipboard(Config.DiscordURL)
-            local Status = MainFrame:FindFirstChild("StatusLabel")
-            if Status then 
-                Status.Text = "Discord Link Copied!"
-                Status.TextColor3 = Color3.fromRGB(88, 101, 242)
+    local animConn = RunService.RenderStepped:Connect(function()
+        if not ScreenGui or not ScreenGui.Parent then
+            pcall(function() animConn:Disconnect() end)
+            return
+        end
+        gradient.Rotation = (gradient.Rotation + 0.08) % 360
+        local t = tick()
+        for _, d in ipairs(dots) do
+            if d.frame and d.frame.Parent then
+                local y = (d.y + t * d.speed) % 1
+                local x = (d.x + math.sin(t * 0.4 + d.speed * 50) * 0.02) % 1
+                d.frame.Position = UDim2.fromScale(x, y)
             end
-            local inviteCode = string.match(Config.DiscordURL, "discord%.gg/([%w-]+)")
-            if syn and syn.request and inviteCode then
-                syn.request({Url = "http://localhost:1111/discord?invite=" .. inviteCode, Method = "GET"})
-            end
-        end)
-        
-        currentYOffset = currentYOffset + 45
-    end
-
-    if Config.ShowInstagram then
-        local InstaBtn = Instance.new("TextButton", MainFrame)
-        InstaBtn.Size = UDim2.new(0.85, 0, 0, 35)
-        InstaBtn.Position = UDim2.new(0.075, 0, 0, currentYOffset)
-        InstaBtn.Text = "      FOLLOW INSTAGRAM"
-        InstaBtn.Font = "GothamBold";
-        InstaBtn.TextSize = 14
-        InstaBtn.BackgroundColor3 = Color3.fromRGB(225, 48, 108)
-        InstaBtn.TextColor3 = Color3.new(1, 1, 1)
-        Instance.new("UICorner", InstaBtn)
-        AddRainbowStroke(InstaBtn)
-
-        local InstaIcon = Instance.new("ImageLabel", InstaBtn)
-        InstaIcon.Size = UDim2.new(0, 20, 0, 20)
-        InstaIcon.Position = UDim2.new(0.1, 0, 0.5, -10)
-        InstaIcon.BackgroundTransparency = 1
-        InstaIcon.Image = "rbxassetid://18355586382"
-        
-        InstaBtn.MouseButton1Click:Connect(function()
-            fSetClipboard(Config.InstagramURL)
-            local Status = MainFrame:FindFirstChild("StatusLabel")
-            if Status then 
-                Status.Text = "Instagram Link Copied!"
-                Status.TextColor3 = Color3.fromRGB(225, 48, 108)
-            end
-        end)
-        
-        currentYOffset = currentYOffset + 45
-    end
-    
-    if Config.ShowYoutube then
-        local YTBtn = Instance.new("TextButton", MainFrame)
-        YTBtn.Size = UDim2.new(0.85, 0, 0, 35)
-        YTBtn.Position = UDim2.new(0.075, 0, 0, currentYOffset)
-        YTBtn.Text = "      SUBSCRIBE YOUTUBE"
-        YTBtn.Font = "GothamBold";
-        YTBtn.TextSize = 14
-        YTBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        YTBtn.TextColor3 = Color3.new(1, 1, 1)
-        Instance.new("UICorner", YTBtn)
-        AddRainbowStroke(YTBtn)
-
-        local YTIcon = Instance.new("ImageLabel", YTBtn)
-        YTIcon.Size = UDim2.new(0, 20, 0, 20)
-        YTIcon.Position = UDim2.new(0.1, 0, 0.5, -10)
-        YTIcon.BackgroundTransparency = 1
-        YTIcon.Image = "rbxassetid://82532989017804"
-        
-        YTBtn.MouseButton1Click:Connect(function()
-            fSetClipboard(Config.YoutubeURL)
-            local Status = MainFrame:FindFirstChild("StatusLabel")
-            if Status then
-                Status.Text = "YouTube Link Copied!"
-                Status.TextColor3 = Color3.fromRGB(255, 0, 0)
-            end
-        end)
-        
-        currentYOffset = currentYOffset + 45
-    end
-
-    local KeyInput = Instance.new("TextBox", MainFrame)
-    KeyInput.Size = UDim2.new(0.85, 0, 0, 40)
-    KeyInput.Position = UDim2.new(0.075, 0, 0, currentYOffset + 15)
-    KeyInput.PlaceholderText = "Enter Key..."
-    KeyInput.Text = ""
-    KeyInput.Font = Enum.Font.GothamSemibold;
-    KeyInput.TextSize = 14
-    KeyInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25);
-    KeyInput.TextColor3 = Color3.new(1, 1, 1)
-    Instance.new("UICorner", KeyInput)
-
-    local VerifyBtn = Instance.new("TextButton", MainFrame)
-    VerifyBtn.Size = UDim2.new(0.4, 0, 0, 40)
-    VerifyBtn.Position = UDim2.new(0.075, 0, 0, currentYOffset + 65)
-    VerifyBtn.Text = "VERIFY"
-    VerifyBtn.Font = "GothamBold";
-    VerifyBtn.TextSize = 14
-    VerifyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255);
-    VerifyBtn.TextColor3 = Color3.new(1, 1, 1)
-    Instance.new("UICorner", VerifyBtn)
-
-    local GetKeyBtn = Instance.new("TextButton", MainFrame)
-    GetKeyBtn.Size = UDim2.new(0.4, 0, 0, 40)
-    GetKeyBtn.Position = UDim2.new(0.525, 0, 0, currentYOffset + 65)
-    GetKeyBtn.Text = "GET KEY"
-    GetKeyBtn.Font = "GothamBold";
-    GetKeyBtn.TextSize = 14
-    GetKeyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35);
-    GetKeyBtn.TextColor3 = Color3.new(1, 1, 1)
-    Instance.new("UICorner", GetKeyBtn)
-
-    local Status = Instance.new("TextLabel", MainFrame)
-    Status.Name = "StatusLabel"
-    Status.Size = UDim2.new(1, 0, 0, 30)
-    Status.Position = UDim2.new(0, 0, 0, currentYOffset + 115)
-    Status.BackgroundTransparency = 1
-    Status.Text = "Waiting for input..."
-    Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-    Status.Font = Enum.Font.Gotham;
-    Status.TextSize = 12
-    
-    MainFrame.Size = UDim2.new(0, 340, 0, currentYOffset + 160)
-
-    VerifyBtn.MouseButton1Click:Connect(function()
-        local key = KeyInput.Text
-        if key == "" then Status.Text = "Enter a key!"; return end
-        Status.Text = "Verifying..."
-        local success, msg = redeemKey(key)
-        if success then
-            Status.Text = "Success! Loading..."
-            Status.TextColor3 = Color3.fromRGB(0, 255, 100)
-            task.wait(0.5)
-            ScreenGui:Destroy()
-            StartMainScript()
-        else
-            Status.Text = msg
-            Status.TextColor3 = Color3.fromRGB(255, 50, 50)
         end
     end)
 
-    GetKeyBtn.MouseButton1Click:Connect(function()
-        Status.Text = "Getting Link..."
-        local success, link = cacheLink()
-        if success then
-            fSetClipboard(link)
-            Status.Text = "Link Copied!"
-            Status.TextColor3 = Color3.fromRGB(0, 170, 255)
-        else
-            Status.Text = tostring(link) 
-            Status.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end)
-
-    if isfile and isfile(Config.KeyFileName) then
-        local savedKey = readfile(Config.KeyFileName)
-        if savedKey ~= "" then
-            Status.Text = "Found saved key, verifying..."
-            task.spawn(function()
-                local success, msg = redeemKey(savedKey)
-                if success then
-                    Status.Text = "Auto-login success!"
-                    Status.TextColor3 = Color3.fromRGB(0, 255, 100)
-                    task.wait(0.5)
-                    ScreenGui:Destroy()
-                    StartMainScript()
-                else
-                    Status.Text = "Saved key expired or invalid."
-                    Status.TextColor3 = Color3.fromRGB(255, 150, 0)
-                end
+    local viewportConn
+    pcall(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+            viewportConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+                if not ScreenGui or not ScreenGui.Parent then return end
+                local v = cam.ViewportSize
+                local mobile = UserInputService.TouchEnabled and v.X <= 650
+                local w = mobile and 340 or 430
+                local h = mobile and 500 or 455
+                card.Size = UDim2.fromOffset(w, h)
+                card.Position = UDim2.new(0.5, -w/2, 0.5, -h/2)
             end)
         end
+    end)
+
+    ScreenGui.Destroying:Connect(function()
+        pcall(function() animConn:Disconnect() end)
+        pcall(function() if viewportConn then viewportConn:Disconnect() end end)
+    end)
+
+    -- Auto-login from the validated persistent key file.
+    local savedKey, loadErr = LoadSavedKey()
+    if savedKey then
+        input.Text = savedKey
+        setStatus("Saved key found • verifying automatically...", Color3.fromRGB(120, 190, 255))
+        task.spawn(function()
+            local ok = redeemKey(savedKey)
+            if ok then
+                setStatus("Auto-login successful. Launching...", Color3.fromRGB(112, 225, 165))
+                task.wait(0.3)
+                if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+                StartMainScript()
+            else
+                setStatus("Saved key is expired or invalid. Enter a new key.", Color3.fromRGB(255, 175, 90))
+            end
+        end)
+    elseif loadErr and loadErr ~= "No saved key file" then
+        setStatus("Key file unavailable: " .. tostring(loadErr), Color3.fromRGB(255, 175, 90))
     end
+
 end
 
 local player = game:GetService("Players").LocalPlayer
